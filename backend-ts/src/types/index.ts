@@ -17,6 +17,7 @@ export interface ApiKey {
   name: string;
   provider: string;
   key: string;
+  model?: string;
   isActive: boolean;
   createdAt: string;
   lastUsed?: string;

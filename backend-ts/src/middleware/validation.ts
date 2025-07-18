@@ -31,6 +31,7 @@ const apiKeySchema = Joi.object({
   name: Joi.string().required().min(1).max(100),
   provider: Joi.string().valid("groq", "openai", "claude", "ollama").required(),
   key: Joi.string().required().min(1),
+  model: Joi.string().optional().allow(""),
   isActive: Joi.boolean().optional(),
   createdAt: Joi.string().optional(),
   lastUsed: Joi.string().optional().allow(null),

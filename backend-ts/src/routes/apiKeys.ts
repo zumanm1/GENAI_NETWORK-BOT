@@ -52,4 +52,18 @@ router.get("/usage", (req: Request, res: Response) => {
   }
 });
 
+// GET /api/api-keys/models/:provider - Get available models for a provider
+router.get("/models/:provider", (req: Request, res: Response) => {
+  try {
+    const { provider } = req.params;
+    const models = llmIntegration.getAvailableModels(provider);
+    res.json({ success: true, models });
+  } catch (error) {
+    logger.error(
+      `Error getting models for provider ${req.params.provider}: ${error}`,
+    );
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
 export { router as apiKeyRoutes };

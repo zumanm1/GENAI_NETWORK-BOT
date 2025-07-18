@@ -43,6 +43,7 @@ export class LLMIntegration {
         name: "Groq Production",
         provider: "groq",
         key: "gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        model: "llama3-8b-8192",
         isActive: true,
         lastUsed: "2 hours ago",
       },
@@ -50,6 +51,7 @@ export class LLMIntegration {
         name: "Ollama Local",
         provider: "ollama",
         key: "http://localhost:11434",
+        model: "llama2",
         isActive: false,
         lastUsed: "1 day ago",
       },
@@ -98,6 +100,7 @@ export class LLMIntegration {
       name: keyData.name || "",
       provider: keyData.provider || "groq",
       key: keyData.key || "",
+      model: keyData.model || this.getDefaultModel(keyData.provider || "groq"),
       isActive: keyData.isActive ?? this.apiKeys.size === 0, // First key is active by default
       createdAt: keyData.createdAt || new Date().toISOString(),
       lastUsed: keyData.lastUsed,
@@ -139,6 +142,51 @@ export class LLMIntegration {
   private maskKey(key: string): string {
     if (key.length <= 8) return "*".repeat(key.length);
     return key.substring(0, 4) + "*".repeat(key.length - 8) + key.slice(-4);
+  }
+
+  private getDefaultModel(provider: string): string {
+    const defaultModels: Record<string, string> = {
+      groq: "llama3-8b-8192",
+      openai: "gpt-3.5-turbo",
+      claude: "claude-3-haiku-20240307",
+      ollama: "llama2",
+    };
+    return defaultModels[provider] || "";
+  }
+
+  getAvailableModels(provider: string): string[] {
+    const models: Record<string, string[]> = {
+      groq: [
+        "llama3-8b-8192",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768",
+        "gemma-7b-it",
+        "gemma2-9b-it",
+      ],
+      openai: [
+        "gpt-3.5-turbo",
+        "gpt-4",
+        "gpt-4-turbo",
+        "gpt-4o",
+        "gpt-4o-mini",
+      ],
+      claude: [
+        "claude-3-haiku-20240307",
+        "claude-3-sonnet-20240229",
+        "claude-3-opus-20240229",
+      ],
+      ollama: [
+        "llama2",
+        "llama3",
+        "codellama",
+        "mistral",
+        "mixtral",
+        "neural-chat",
+        "starling-lm",
+        "dolphin-mixtral",
+      ],
+    };
+    return models[provider] || [];
   }
 
   async generateConfiguration(
@@ -239,7 +287,7 @@ Generate the configuration:`;
       }
 
       const response = await client.chat.completions.create({
-        model: "llama3-8b-8192",
+        model: apiKey.model || "llama3-8b-8192",
         messages: [
           {
             role: "system",
@@ -258,7 +306,7 @@ Generate the configuration:`;
         success: true,
         configuration,
         provider: "groq",
-        model: "llama3-8b-8192",
+        model: apiKey.model || "llama3-8b-8192",
       };
     } catch (error) {
       logger.error(`Groq API error: ${error}`);
@@ -282,7 +330,7 @@ Generate the configuration:`;
       }
 
       const response = await client.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: apiKey.model || "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -301,7 +349,7 @@ Generate the configuration:`;
         success: true,
         configuration,
         provider: "openai",
-        model: "gpt-3.5-turbo",
+        model: apiKey.model || "gpt-3.5-turbo",
       };
     } catch (error) {
       logger.error(`OpenAI API error: ${error}`);
@@ -321,7 +369,7 @@ Generate the configuration:`;
       const response = await axios.post(
         `${ollamaUrl}/api/generate`,
         {
-          model: config.ollamaModel,
+          model: apiKey.model || config.ollamaModel,
           prompt,
           stream: false,
         },
@@ -335,7 +383,7 @@ Generate the configuration:`;
           success: true,
           configuration,
           provider: "ollama",
-          model: config.ollamaModel,
+          model: apiKey.model || config.ollamaModel,
         };
       } else {
         logger.error(`Ollama API error: ${response.status}`);

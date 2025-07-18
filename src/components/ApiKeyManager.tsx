@@ -49,6 +49,7 @@ interface ApiKey {
   name: string;
   provider: string;
   key: string;
+  model?: string;
   isActive: boolean;
   createdAt: string;
   lastUsed?: string;
@@ -72,6 +73,7 @@ const ApiKeyManager = ({
     name: "",
     provider: "groq",
     key: "",
+    model: "",
   });
 
   // Load keys from localStorage on mount
@@ -92,6 +94,7 @@ const ApiKeyManager = ({
           name: "Groq Production",
           provider: "groq",
           key: "gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          model: "llama3-8b-8192",
           isActive: true,
           createdAt: "2024-01-15",
           lastUsed: "2 hours ago",
@@ -101,6 +104,7 @@ const ApiKeyManager = ({
           name: "Ollama Local",
           provider: "ollama",
           key: "http://localhost:11434",
+          model: "llama2",
           isActive: false,
           createdAt: "2024-01-10",
           lastUsed: "1 day ago",
@@ -132,11 +136,12 @@ const ApiKeyManager = ({
         name: newKey.name,
         provider: newKey.provider,
         key: newKey.key,
+        model: newKey.model || getDefaultModel(newKey.provider),
         isActive: apiKeys.length === 0, // First key is active by default
         createdAt: new Date().toISOString().split("T")[0],
       };
       setApiKeys([...apiKeys, key]);
-      setNewKey({ name: "", provider: "groq", key: "" });
+      setNewKey({ name: "", provider: "groq", key: "", model: "" });
       setIsAddDialogOpen(false);
     }
   };
@@ -144,9 +149,7 @@ const ApiKeyManager = ({
   const handleEditKey = () => {
     if (editingKey && editingKey.name && editingKey.key) {
       setApiKeys(
-        apiKeys.map((k) =>
-          k.id === editingKey.id ? { ...editingKey, key: editingKey.key } : k,
-        ),
+        apiKeys.map((k) => (k.id === editingKey.id ? { ...editingKey } : k)),
       );
       setEditingKey(null);
       setIsEditDialogOpen(false);
@@ -173,6 +176,51 @@ const ApiKeyManager = ({
   const maskKey = (key: string) => {
     if (key.length <= 8) return "*".repeat(key.length);
     return key.substring(0, 4) + "*".repeat(key.length - 8) + key.slice(-4);
+  };
+
+  const getDefaultModel = (provider: string): string => {
+    const defaultModels: Record<string, string> = {
+      groq: "llama3-8b-8192",
+      openai: "gpt-3.5-turbo",
+      claude: "claude-3-haiku-20240307",
+      ollama: "llama2",
+    };
+    return defaultModels[provider] || "";
+  };
+
+  const getAvailableModels = (provider: string): string[] => {
+    const models: Record<string, string[]> = {
+      groq: [
+        "llama3-8b-8192",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768",
+        "gemma-7b-it",
+        "gemma2-9b-it",
+      ],
+      openai: [
+        "gpt-3.5-turbo",
+        "gpt-4",
+        "gpt-4-turbo",
+        "gpt-4o",
+        "gpt-4o-mini",
+      ],
+      claude: [
+        "claude-3-haiku-20240307",
+        "claude-3-sonnet-20240229",
+        "claude-3-opus-20240229",
+      ],
+      ollama: [
+        "llama2",
+        "llama3",
+        "codellama",
+        "mistral",
+        "mixtral",
+        "neural-chat",
+        "starling-lm",
+        "dolphin-mixtral",
+      ],
+    };
+    return models[provider] || [];
   };
 
   const getProviderBadge = (provider: string) => {
@@ -264,6 +312,31 @@ const ApiKeyManager = ({
                     placeholder="Enter your API key"
                   />
                 </div>
+                {(newKey.provider === "groq" ||
+                  newKey.provider === "ollama") && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="model" className="text-right">
+                      Model
+                    </Label>
+                    <Select
+                      value={newKey.model || getDefaultModel(newKey.provider)}
+                      onValueChange={(value) =>
+                        setNewKey({ ...newKey, model: value })
+                      }
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableModels(newKey.provider).map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button onClick={handleAddKey}>Add Key</Button>
@@ -307,6 +380,7 @@ const ApiKeyManager = ({
                     )}
                   </Button>
                 </div>
+                {key.model && <div>Model: {key.model}</div>}
                 <div>Created: {key.createdAt}</div>
                 {key.lastUsed && <div>Last used: {key.lastUsed}</div>}
               </div>
@@ -382,6 +456,39 @@ const ApiKeyManager = ({
                             className="col-span-3"
                           />
                         </div>
+                        {(editingKey.provider === "groq" ||
+                          editingKey.provider === "ollama") && (
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-model" className="text-right">
+                              Model
+                            </Label>
+                            <Select
+                              value={
+                                editingKey.model ||
+                                getDefaultModel(editingKey.provider)
+                              }
+                              onValueChange={(value) =>
+                                setEditingKey({
+                                  ...editingKey,
+                                  model: value,
+                                })
+                              }
+                            >
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a model" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableModels(editingKey.provider).map(
+                                  (model) => (
+                                    <SelectItem key={model} value={model}>
+                                      {model}
+                                    </SelectItem>
+                                  ),
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     )}
                     <DialogFooter>
