@@ -240,6 +240,131 @@ export const setupSocketHandlers = (io: Server): void => {
       }
     });
 
+    // Handle configuration push to dummy router
+    socket.on(
+      "push_config_to_dummy",
+      async (data: { configuration: string; device_id: string }) => {
+        try {
+          const { configuration, device_id } = data;
+
+          if (!device_id) {
+            socket.emit("error", { message: "No device selected" });
+            return;
+          }
+
+          if (!configuration.trim()) {
+            socket.emit("error", { message: "Configuration cannot be empty" });
+            return;
+          }
+
+          // Start push process
+          socket.emit("config_push_started", {
+            message: "Pushing configuration to dummy router...",
+            device_id,
+          });
+
+          const pushResult = await networkOps.pushConfigurationToDummyRouter(
+            device_id,
+            configuration,
+          );
+
+          if (pushResult.success) {
+            socket.emit("config_pushed_to_dummy", {
+              success: true,
+              device_id,
+              result: pushResult.result,
+              steps: pushResult.steps,
+              message: "Configuration pushed successfully to dummy router",
+            });
+          } else {
+            socket.emit("config_push_failed", {
+              success: false,
+              device_id,
+              error: pushResult.error || "Failed to push configuration",
+            });
+          }
+
+          logger.info(
+            `Configuration push to dummy router ${device_id}: ${pushResult.success}`,
+          );
+        } catch (error) {
+          logger.error(`Error pushing configuration to dummy router: ${error}`);
+          socket.emit("error", { message: String(error) });
+        }
+      },
+    );
+
+    // Handle configuration retrieval from dummy router
+    socket.on(
+      "retrieve_config_from_dummy",
+      async (data: { device_id: string }) => {
+        try {
+          const { device_id } = data;
+
+          if (!device_id) {
+            socket.emit("error", { message: "No device selected" });
+            return;
+          }
+
+          // Start retrieval process
+          socket.emit("config_retrieval_started", {
+            message: "Retrieving configuration from dummy router...",
+            device_id,
+          });
+
+          const retrievalResult =
+            await networkOps.retrieveConfigurationFromDummyRouter(device_id);
+
+          if (retrievalResult.success) {
+            socket.emit("config_retrieved_from_dummy", {
+              success: true,
+              device_id,
+              configuration: retrievalResult.configuration,
+              message: "Configuration retrieved successfully from dummy router",
+            });
+          } else {
+            socket.emit("config_retrieval_failed", {
+              success: false,
+              device_id,
+              error:
+                retrievalResult.error || "Failed to retrieve configuration",
+            });
+          }
+
+          logger.info(
+            `Configuration retrieval from dummy router ${device_id}: ${retrievalResult.success}`,
+          );
+        } catch (error) {
+          logger.error(
+            `Error retrieving configuration from dummy router: ${error}`,
+          );
+          socket.emit("error", { message: String(error) });
+        }
+      },
+    );
+
+    // Handle dummy router status request
+    socket.on("get_dummy_router_status", (data: { device_id: string }) => {
+      try {
+        const { device_id } = data;
+
+        if (!device_id) {
+          socket.emit("error", { message: "Device ID required" });
+          return;
+        }
+
+        const dummyStatus = networkOps.getDummyRouterStatus(device_id);
+
+        socket.emit("dummy_router_status", {
+          device_id,
+          status: dummyStatus,
+        });
+      } catch (error) {
+        logger.error(`Error getting dummy router status: ${error}`);
+        socket.emit("error", { message: String(error) });
+      }
+    });
+
     // Handle client disconnection
     socket.on("disconnect", () => {
       activeSessions.delete(socket.id);

@@ -79,6 +79,12 @@ export interface SocketEvents {
   }) => void;
   apply_config: (data: { configuration: string; device_id: string }) => void;
   get_device_status: (data: { device_id: string }) => void;
+  push_config_to_dummy: (data: {
+    configuration: string;
+    device_id: string;
+  }) => void;
+  retrieve_config_from_dummy: (data: { device_id: string }) => void;
+  get_dummy_router_status: (data: { device_id: string }) => void;
 
   // Server to Client
   connected: (data: { session_id: string; message: string }) => void;
@@ -138,5 +144,34 @@ export interface SocketEvents {
     status: any;
     connected: boolean;
   }) => void;
+  config_push_started: (data: { message: string; device_id: string }) => void;
+  config_pushed_to_dummy: (data: {
+    success: boolean;
+    device_id: string;
+    result: string;
+    steps: Array<any>;
+    message: string;
+  }) => void;
+  config_push_failed: (data: {
+    success: boolean;
+    device_id: string;
+    error: string;
+  }) => void;
+  config_retrieval_started: (data: {
+    message: string;
+    device_id: string;
+  }) => void;
+  config_retrieved_from_dummy: (data: {
+    success: boolean;
+    device_id: string;
+    configuration: string;
+    message: string;
+  }) => void;
+  config_retrieval_failed: (data: {
+    success: boolean;
+    device_id: string;
+    error: string;
+  }) => void;
+  dummy_router_status: (data: { device_id: string; status: any }) => void;
   error: (data: { message: string }) => void;
 }
